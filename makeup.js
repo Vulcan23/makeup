@@ -299,7 +299,7 @@ function isEven(number) {
 }
 
 function getArray(count) {
-    return Array(count + 1).join("0").split("").map(value => new Decimal(value));
+    return Array(count).fill(new Decimal(0));
 }
 
 /**
