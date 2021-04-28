@@ -237,7 +237,7 @@ MakeUp.prototype.getCoefficient = function () {
                     let from = new Decimal(1),
                         to = arrMaximumCoefficient[0].minus(1);
                     while (from.lessThanOrEqualTo(to)) {
-                        let mid = from.plus(to).dividedBy(2).trunc();
+                        let mid = to.minus(from).dividedBy(2).plus(from).trunc();
                         let sum = arr[0].times(mid).plus(min);
                         if (sum.lessThan(total)) {
                             from = mid.plus(1);
@@ -410,7 +410,7 @@ function fnFormatArr_Final(total, arr) {
                 let from = new Decimal(1),
                     to = arrMaximumCoefficient[0].minus(1);
                 while (from.lessThanOrEqualTo(to)) {
-                    let mid = from.plus(to).dividedBy(2).trunc();
+                    let mid = to.minus(from).dividedBy(2).plus(from).trunc();
                     let i = arr[0].times(mid).plus(min).comparedTo(total);
                     if (i === 0) {
                         return true;
