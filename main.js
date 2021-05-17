@@ -1,6 +1,6 @@
 const MakeUp = require("./makeup.js");
 
-let map = new MakeUp(700, [19.9, 29.9, 38.9]);
+let map = new MakeUp(4444, [19.9, 29.9]);
 map.getCoefficient();
 console.log(map.totalCombinations);
 console.log(map.arrCoefficient);

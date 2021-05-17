@@ -28,13 +28,13 @@ function MakeUp(total, arrChild) {
     }
 
     // 经过计算后的明确可能性的total（预计比原先的total大）
-    this.totalFormatted = undefined;
+    this.totalFormatted = null;
 
     // 经过计算后的明确可能性的arrChild（预计比原先的arrChild有更少的元素）
     this.arrChildFormatted = [];
 
     // 最终得到价格
-    this.totalCombinations;
+    this.totalCombinations = null;
 
     // 最终得到的与arrChildFormatted匹配的系数（也就是凑单的件数）
     this.arrCoefficient = [];
@@ -79,7 +79,7 @@ MakeUp.prototype.fnFormatTotal = function () {
     let total = this.total,
         arr = this.arrChildFormatted;
 
-    if (this.totalFormatted !== undefined) {
+    if (this.totalFormatted !== null) {
         return;
     }
 
@@ -159,7 +159,7 @@ MakeUp.prototype.getCoefficient = function () {
         return;
     }
 
-    if (total === undefined) {
+    if (total === null) {
         this.fnFormatTotal();
         return this.getCoefficient();
     }
