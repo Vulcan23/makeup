@@ -314,6 +314,7 @@ MakeUp.prototype.getCoefficient = function () {
                 if (markLimitsOfInspection-- === 0) {
                     return toNumber(this);
                 }
+                markLastChange0 = 0;
                 break;
             }
             arrCoefficient[++markLastChange] = arrCoefficient[markLastChange].plus(1);
