@@ -27,12 +27,9 @@ function MakeUp(total, arrChild) {
         // 小数点后超过两位的都不要，必须大于0
         if (price.decimalPlaces() <= 2 && price.greaterThan(0)) {
             price.restriction = currentValue.restriction;
-            if (price.restriction) {
-                if (price.restriction < 0) {
-                    throw new Error("负数？别闹！");
-                }
-                if (price.restriction % 1 !== 0) {
-                    throw new Error("我们要整数！");
+            if (price.restriction !== undefined) {
+                if (!(price.restriction > 0 && price.restriction % 1 === 0)) {
+                    throw new Error("restriction必须是正整数");
                 }
                 let quotient = this.total.dividedBy(price);
                 // 如果可能最大的系数都不比限制大，那么可视为限制不存在
