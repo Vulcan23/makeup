@@ -4,11 +4,11 @@ const Decimal = require("decimal.js");
  *  先过滤arrChild：
  *      1.成倍数的直接不要
  *      2.关注最后一位有效数字，判断过了的放入新arr
- *      3.还不确定的，用二叉树判断求和判断是否放入新arr
+ *      3.还不确定的，用二分查找判断求和判断是否放入新arr
  *      4.得到新arr
  *  关注total：
  *      1.可以提前得到新total……
- *  二叉树求得结果
+ *  二分查找求得结果
  */
 function MakeUp(total, arrChild) {
     this.total = new Decimal(total);
@@ -18,13 +18,52 @@ function MakeUp(total, arrChild) {
         throw new Error("总价必须大于0");
     }
 
-    // 小数点后超过两位的都不要，必须大于0
-    this.arrChild = arrChild.map(value => new Decimal(value))
-        .filter(value => value.decimalPlaces() <= 2 && value.greaterThan(0))
-        .sort((a, b) => a.comparedTo(b));
+    // 是否拥有无限制的Child
+    this.hasUnlimited = false;
+    this.hasRestriction = false;
+
+    this.arrChild = arrChild.reduce((accumulator, currentValue) => {
+        let price = new Decimal(typeof currentValue === "number" ? currentValue : currentValue.price);
+        // 小数点后超过两位的都不要，必须大于0
+        if (price.decimalPlaces() <= 2 && price.greaterThan(0)) {
+            price.restriction = currentValue.restriction;
+            if (price.restriction) {
+                if (price.restriction < 0) {
+                    throw new Error("负数？别闹！");
+                }
+                if (price.restriction % 1 !== 0) {
+                    throw new Error("我们要整数！");
+                }
+                let quotient = this.total.dividedBy(price);
+                // 如果可能最大的系数都不比限制大，那么可视为限制不存在
+                if ((quotient.isInteger() ? quotient : quotient.trunc().plus(1)).lessThanOrEqualTo(price.restriction)) {
+                    price.restriction = undefined;
+                } else {
+                    !this.hasRestriction && (this.hasRestriction = true);
+                }
+            }
+            !price.restriction && !this.hasUnlimited && (this.hasUnlimited = true);
+            return [...accumulator, price];
+        }
+        return accumulator;
+    }, []).sort((a, b) => a.comparedTo(b));
 
     if (this.arrChild.length < 1) {
         throw new Error("过滤后arrChild没有元素");
+    }
+
+    if (!this.hasUnlimited
+        && (() => {
+            let sum = new Decimal(0);
+            for (let value of this.arrChild) {
+                sum = sum.plus(value.times(value.restriction));
+                if (sum.greaterThanOrEqualTo(this.total)) {
+                    return false;
+                }
+            }
+            return true;
+        })()) {
+        throw new Error("arrChild元素不够用，再来点");
     }
 
     // 经过计算后的明确可能性的total（预计比原先的total大）
@@ -57,17 +96,26 @@ function MakeUp(total, arrChild) {
  */
 MakeUp.prototype.fnFormatArr = function () {
     let arr = this.arrChild,
-        arrNew = this.arrChildFormatted;
+        arrNew = this.arrChildFormatted,
+        /**
+         * 无限制且格式化的
+         */
+        arrUnlimited = [];
 
     if (arrNew.length > 0) {
         return;
     }
 
-    arrNew.push(arr[0]);
-    for (let i = 1; i < arr.length; i++) {
-        let j = fnFormatArr_Preliminary(arr[i], arrNew);
-        if (j > 0 || j === 0 && !fnFormatArr_Final(arr[i], arrNew)) {
-            arrNew.push(arr[i]);
+    for (let value of arr) {
+        if (arrUnlimited.length) {
+            let i = fnFormatArr_Preliminary(value, arrUnlimited);
+            if (i > 0 || i === 0 && !fnFormatArr_Final(value, arrUnlimited)) {
+                arrNew.push(value);
+                value.restriction && arrUnlimited.push(value);
+            }
+        } else {
+            arrNew.push(value);
+            value.restriction && arrUnlimited.push(value);
         }
     }
 }
@@ -83,7 +131,7 @@ MakeUp.prototype.fnFormatTotal = function () {
         return;
     }
 
-    if (arr.length === 0) {
+    if (!arr.length) {
         this.fnFormatArr();
         return this.fnFormatTotal();
     }
@@ -103,21 +151,13 @@ MakeUp.prototype.fnFormatTotal = function () {
                 if (number === 5 || !isEven(number) && yesEven) {
                     bIncrement = false;
                 } else {
-                    if (!yesFive) {
-                        yesFive = true;
-                    }
+                    !yesFive && (yesFive = true);
                     numUp = 1;
                 }
             } else {
-                if (numUp > 0) {
-                    numUp = 0;
-                }
-                if (!yesEven && isEven(inumber)) {
-                    yesEven = true;
-                }
-                if (isEven(number) || !isEven(inumber)) {
-                    bIncrement = false;
-                }
+                numUp > 0 && (numUp = 0);
+                !yesEven && isEven(inumber) && (yesEven = true);
+                (isEven(number) || !isEven(inumber)) && (bIncrement = false);
             }
         } else {
             numUp = Math.min(numUp, ikey - key);
@@ -136,12 +176,8 @@ MakeUp.prototype.fnFormatTotal = function () {
                     [key, number] = getDigitsOfLastNonzeroEffectiveFigure(total);
                     i = -1;
                     // 此处可以思考：为什么numUp不用复原呢？
-                    if (yesFive) {
-                        yesFive = false;
-                    }
-                    if (yesEven) {
-                        yesEven = false;
-                    }
+                    yesFive && (yesFive = false);
+                    yesEven && (yesEven = false);
                 }
             } else {
                 this.totalFormatted = getSelfIncreasing(total, key);
@@ -152,19 +188,27 @@ MakeUp.prototype.fnFormatTotal = function () {
 }
 
 MakeUp.prototype.getCoefficient = function () {
-    let total = this.totalFormatted,
-        arr = this.arrChildFormatted;
+    let total = this.totalFormatted;
 
     if (this.arrCoefficient.length > 0) {
         return;
     }
 
-    if (total === null) {
+    if (!total) {
         this.fnFormatTotal();
         return this.getCoefficient();
     }
 
     if (!total.equals(this.total)) {
+        if (this.hasRestriction) {
+            this.arrChildFormatted = this.arrChildFormatted.map(value => {
+                if (value.restriction) {
+                    let quotient = total.dividedBy(value);
+                    (quotient.isInteger() ? quotient : quotient.trunc().plus(1)).lessThanOrEqualTo(value.restriction) && (value.restriction = undefined);
+                }
+                return value;
+            });
+        }
         let result = isMultiple(total, arr);
         if (result[0]) {
             this.totalCombinations = total;
@@ -176,30 +220,32 @@ MakeUp.prototype.getCoefficient = function () {
         }
     }
 
-    let firstCoefficient = total.dividedBy(arr[0]).trunc();
-    if (firstCoefficient.equals(0) || firstCoefficient.equals(1) || arr.length === 1) {
-        this.totalCombinations = arr[0].times(firstCoefficient.plus(1));
-        this.arrCoefficient.push({
-            key: arr[0],
-            number: firstCoefficient.plus(1),
-        });
-        return toNumber(this);
+    let arr = this.arrChildFormatted;
+
+    let firstCoefficient;
+    if (arr[0].restriction) {
+        firstCoefficient = new Decimal(arr[0].restriction);
+    } else {
+        firstCoefficient = total.dividedBy(arr[0]).trunc();
+        if (firstCoefficient.equals(0) || firstCoefficient.equals(1) || arr.length === 1) {
+            this.totalCombinations = arr[0].times(firstCoefficient.plus(1));
+            this.arrCoefficient.push({
+                key: arr[0],
+                number: firstCoefficient.plus(1),
+            });
+            return toNumber(this);
+        }
     }
 
-    let arrMaximumCoefficient = [firstCoefficient].concat(arr.slice(1).map(value => total.dividedBy(value).trunc().plus(1))),
+    let arrMaximumCoefficient = [firstCoefficient, ...arr.slice(1).map(value => value.restriction ? new Decimal(value.restriction) : total.dividedBy(value).trunc().plus(1))],
         /**
          *  缺省第一个系数
          */
-        arrCoefficient = [new Decimal(1)].concat(getArray(arrMaximumCoefficient.length - 2)),
+        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 2)],
         markLimitsOfInspection = arrCoefficient.length - 1;
 
-    // 预设第一个系数最大其余为零的情况，为下文（①处）省去判断
-    this.totalCombinations = arr[0].times(arrMaximumCoefficient[0].plus(1));
-    this.arrCoefficient = [arrMaximumCoefficient[0].plus(1)].concat(arrCoefficient).map((value, index) => ({
-        key: arr[index],
-        number: value,
-    }));
-    
+    this.totalCombinations = new Decimal(Number.MAX_SAFE_INTEGER);
+
     while (true) {
         let min = arrCoefficient.reduce((accumulator, currentValue, currentIndex) => accumulator.plus(arr[currentIndex + 1].times(currentValue)), new Decimal(0)),
             markLastChange,
@@ -221,21 +267,19 @@ MakeUp.prototype.getCoefficient = function () {
             markLastChange0 = ++markLastChange;
         } else {
             let max = arr[0].times(arrMaximumCoefficient[0]).plus(min);
-            // 此处可以思考：会出现等于的情况吗？不会！
             if (max.greaterThan(total)) {
-                // 于是不用判断等于的情况
                 if (min.greaterThanOrEqualTo(total)) {
                     this.totalCombinations = min;
-                    this.arrCoefficient = [new Decimal(0)].concat(arrCoefficient).map((value, index) => ({
+                    this.arrCoefficient = [new Decimal(0), ...arrCoefficient].map((value, index) => ({
                         key: arr[index],
                         number: value,
                     }));
                     if (this.totalCombinations.equals(total)) {
                         return toNumber(this);
                     }
-                } else {// （①）此处可以思考：为什么省去else if max小于this.totalCombinations的判断
+                } else {
                     let from = new Decimal(1),
-                        to = arrMaximumCoefficient[0].minus(1);
+                        to = arrMaximumCoefficient[0].minus(arr[0].restriction ? 0 : 1);
                     while (from.lessThanOrEqualTo(to)) {
                         let mid = to.minus(from).dividedBy(2).plus(from).trunc();
                         let sum = arr[0].times(mid).plus(min);
@@ -245,7 +289,7 @@ MakeUp.prototype.getCoefficient = function () {
                             to = mid.minus(1);
                         } else {
                             this.totalCombinations = sum;
-                            this.arrCoefficient = [mid].concat(arrCoefficient).map((value, index) => ({
+                            this.arrCoefficient = [mid, ...arrCoefficient].map((value, index) => ({
                                 key: arr[index],
                                 number: value,
                             }));
@@ -255,6 +299,13 @@ MakeUp.prototype.getCoefficient = function () {
                         }
                     }
                 }
+            } else if (max.equals(total)) {
+                this.totalCombinations = total;
+                this.arrCoefficient = [arrMaximumCoefficient[0], ...arrCoefficient].map((value, index) => ({
+                    key: arr[index],
+                    number: value,
+                }));
+                return toNumber(this);
             }
             markLastChange0 = markLastChange = 0;
         }
@@ -274,14 +325,13 @@ MakeUp.prototype.getCoefficient = function () {
     }
 }
 
-
 function isMultiple(total, arr) {
     for (let value of arr) {
-        if (total.mod(value).toNumber() === 0) {
+        if (!value.restriction && total.mod(value).toNumber() === 0) {
             return [true, value];
         }
     }
-    return [false];
+    return [false, null];
 }
 
 /**
@@ -356,9 +406,7 @@ function fnFormatArr_Preliminary(total, arr) {
             return 0;
         }
         if (key === ikey) {
-            if (!yesEven && isEven(inumber)) {
-                yesEven = true;
-            }
+            !yesEven && isEven(inumber) && (yesEven = true);
             if (inumber === 5 && (number === 5 || !isEven(number) && yesEven) || inumber !== 5 && (isEven(number) || !isEven(inumber))) {
                 return 0;
             }
@@ -368,7 +416,7 @@ function fnFormatArr_Preliminary(total, arr) {
 }
 
 /**
- *  最终判断：二叉树求和，返回是否凑到
+ *  最终判断：二分查找求和，返回是否凑到
  */
 function fnFormatArr_Final(total, arr) {
     let firstCoefficient = total.dividedBy(arr[0]).trunc();
@@ -376,11 +424,11 @@ function fnFormatArr_Final(total, arr) {
         return false;
     }
 
-    let arrMaximumCoefficient = [firstCoefficient].concat(arr.slice(1).map(value => total.dividedBy(value).trunc())),
+    let arrMaximumCoefficient = [firstCoefficient, ...arr.slice(1).map(value => total.dividedBy(value).trunc())],
         /**
          *  缺省第一个系数
          */
-        arrCoefficient = [new Decimal(1)].concat(getArray(arrMaximumCoefficient.length - 2)),
+        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 2)],
         markLimitsOfInspection = arrCoefficient.length - 1;
     while (true) {
         let min = arrCoefficient.reduce((accumulator, currentValue, currentIndex) => accumulator.plus(arr[currentIndex + 1].times(currentValue)), new Decimal(0)),
