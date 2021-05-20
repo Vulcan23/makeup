@@ -474,6 +474,7 @@ function fnFormatArr_Final(total, arr) {
                 if (markLimitsOfInspection-- === 0) {
                     return false;
                 }
+                markLastChange0 = 0;
                 break;
             }
             arrCoefficient[++markLastChange] = arrCoefficient[markLastChange].plus(1);
