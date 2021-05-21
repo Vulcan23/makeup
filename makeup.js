@@ -28,7 +28,7 @@ function MakeUp(total, arrChild) {
         if (price.decimalPlaces() <= 2 && price.greaterThan(0)) {
             price.restriction = currentValue.restriction;
             if (price.restriction !== undefined) {
-                if (!(price.restriction > 0 && price.restriction % 1 === 0)) {
+                if (!(price.restriction > 0 && Number.isInteger(price.restriction))) {
                     throw new Error("restriction必须是正整数");
                 }
                 let quotient = this.total.dividedBy(price);
