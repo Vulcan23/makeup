@@ -206,7 +206,7 @@ MakeUp.prototype.getCoefficient = function () {
                 return value;
             });
         }
-        let result = isMultiple(total, arr);
+        let result = isMultiple(total, this.arrChildFormatted);
         if (result[0]) {
             this.totalCombinations = total;
             this.arrCoefficient.push({
