@@ -40,7 +40,7 @@ function MakeUp(total, arrChild) {
                 }
             }
             !price.restriction && !this.hasUnlimited && (this.hasUnlimited = true);
-            return [...accumulator, price];
+            accumulator.push(price);
         }
         return accumulator;
     }, []).sort((a, b) => a.comparedTo(b));
