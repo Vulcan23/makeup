@@ -108,11 +108,11 @@ MakeUp.prototype.fnFormatArr = function () {
             let i = fnFormatArr_Preliminary(value, arrUnlimited);
             if (i > 0 || i === 0 && !fnFormatArr_Final(value, arrUnlimited)) {
                 arrNew.push(value);
-                value.restriction && arrUnlimited.push(value);
+                !value.restriction && arrUnlimited.push(value);
             }
         } else {
             arrNew.push(value);
-            value.restriction && arrUnlimited.push(value);
+            !value.restriction && arrUnlimited.push(value);
         }
     }
 }
