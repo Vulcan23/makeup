@@ -104,16 +104,12 @@ MakeUp.prototype.fnFormatArr = function () {
     }
 
     for (let value of arr) {
-        if (arrUnlimited.length) {
-            let i = fnFormatArr_Preliminary(value, arrUnlimited);
-            if (i > 0 || i === 0 && !fnFormatArr_Final(value, arrUnlimited)) {
-                arrNew.push(value);
-                !value.restriction && arrUnlimited.push(value);
-            }
-        } else {
-            arrNew.push(value);
-            !value.restriction && arrUnlimited.push(value);
+        let i;
+        if (arrUnlimited.length && (i = fnFormatArr_Preliminary(value, arrUnlimited), !(i > 0 || i === 0 && !fnFormatArr_Final(value, arrUnlimited)))) {
+            continue;
         }
+        arrNew.push(value);
+        !value.restriction && arrUnlimited.push(value);
     }
 }
 
