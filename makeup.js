@@ -36,10 +36,10 @@ function MakeUp(total, arrChild) {
                 if ((quotient.isInteger() ? quotient : quotient.trunc().plus(1)).lessThanOrEqualTo(price.restriction)) {
                     price.restriction = undefined;
                 } else {
-                    !this.hasRestriction && (this.hasRestriction = true);
+                    this.hasRestriction = true;
                 }
             }
-            !price.restriction && !this.hasUnlimited && (this.hasUnlimited = true);
+            !price.restriction && (this.hasUnlimited = true);
             accumulator.push(price);
         }
         return accumulator;
@@ -144,12 +144,12 @@ MakeUp.prototype.fnFormatTotal = function () {
                 if (number === 5 || !isEven(number) && yesEven) {
                     bIncrement = false;
                 } else {
-                    !yesFive && (yesFive = true);
+                    yesFive = true;
                     numUp = 1;
                 }
             } else {
                 numUp > 0 && (numUp = 0);
-                !yesEven && isEven(inumber) && (yesEven = true);
+                isEven(inumber) && (yesEven = true);
                 (isEven(number) || !isEven(inumber)) && (bIncrement = false);
             }
         } else {
@@ -400,7 +400,7 @@ function fnFormatArr_Preliminary(total, arr) {
             return 0;
         }
         if (key === ikey) {
-            !yesEven && isEven(inumber) && (yesEven = true);
+            isEven(inumber) && (yesEven = true);
             if (inumber === 5 && (number === 5 || !isEven(number) && yesEven) || inumber !== 5 && (isEven(number) || !isEven(inumber))) {
                 return 0;
             }
