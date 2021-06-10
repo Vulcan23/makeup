@@ -23,7 +23,7 @@ function MakeUp(total, arrChild) {
     this.hasRestriction = false;
 
     this.arrChild = arrChild.reduce((accumulator, currentValue) => {
-        let price = new Decimal(typeof currentValue === "number" ? currentValue : currentValue.price);
+        let price = new Decimal(currentValue.price || currentValue);
         // 小数点后超过两位的都不要，必须大于0
         if (price.decimalPlaces() <= 2 && price.greaterThan(0)) {
             price.restriction = currentValue.restriction;
