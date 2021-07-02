@@ -446,13 +446,12 @@ function fnFormatArr_Final(total, arr) {
                 return false;
             }
             markLastChange0 = ++markLastChange;
+        } else if (min.equals(total)) {
+            return true;
         } else {
             let max = arr[0].times(arrMaximumCoefficient[0]).plus(min);
             // 此处可以思考：会出现等于的情况吗？不会！
             if (max.greaterThan(total)) {
-                if (min.equals(total)) {// 于是不用判断等于的情况
-                    return true;
-                }
                 let from = new Decimal(1),
                     to = arrMaximumCoefficient[0].minus(1);
                 while (from.lessThanOrEqualTo(to)) {
