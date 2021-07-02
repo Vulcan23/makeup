@@ -149,8 +149,12 @@ MakeUp.prototype.fnFormatTotal = function () {
                 }
             } else {
                 numUp > 0 && (numUp = 0);
-                isEven(inumber) && (yesEven = true);
-                (isEven(number) || !isEven(inumber)) && (bIncrement = false);
+                if (isEven(inumber)) {
+                    yesEven = true;
+                    isEven(number) && (bIncrement = false);
+                } else {
+                    bIncrement = false;
+                }
             }
         } else {
             numUp = Math.min(numUp, ikey - key);
@@ -169,8 +173,8 @@ MakeUp.prototype.fnFormatTotal = function () {
                     [key, number] = getDigitsOfLastNonzeroEffectiveFigure(total);
                     i = -1;
                     // 此处可以思考：为什么numUp不用复原呢？
-                    yesFive && (yesFive = false);
-                    yesEven && (yesEven = false);
+                    yesFive = false;
+                    yesEven = false;
                 }
             } else {
                 this.totalFormatted = getSelfIncreasing(total, key);
@@ -334,7 +338,7 @@ function isMultiple(total, arr) {
  */
 function getDigitsOfLastNonzeroEffectiveFigure(value) {
     let key = value.precision(true) - value.precision() - value.decimalPlaces(),
-        number = parseInt(value.toString().match(/[1-9](?=0*$)/)[0], 10);
+        number = Number(value.toString().match(/[1-9](?=0*$)/)[0]);
     return [key, number];
 }
 
