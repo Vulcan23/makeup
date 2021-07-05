@@ -31,9 +31,8 @@ function MakeUp(total, arrChild) {
                 if (!(price.restriction > 0 && Number.isInteger(price.restriction))) {
                     throw new Error("restriction必须是正整数");
                 }
-                let quotient = this.total.dividedBy(price);
                 // 如果可能最大的系数都不比限制大，那么可视为限制不存在
-                if ((quotient.isInteger() ? quotient : quotient.trunc().plus(1)).lessThanOrEqualTo(price.restriction)) {
+                if (this.total.dividedBy(price).ceil().lessThanOrEqualTo(price.restriction)) {
                     price.restriction = undefined;
                 } else {
                     this.hasRestriction = true;
@@ -199,10 +198,7 @@ MakeUp.prototype.getCoefficient = function () {
     if (!total.equals(this.total)) {
         if (this.hasRestriction) {
             this.arrChildFormatted = this.arrChildFormatted.map(value => {
-                if (value.restriction) {
-                    let quotient = total.dividedBy(value);
-                    (quotient.isInteger() ? quotient : quotient.trunc().plus(1)).lessThanOrEqualTo(value.restriction) && (value.restriction = undefined);
-                }
+                value.restriction && total.dividedBy(value).ceil().lessThanOrEqualTo(value.restriction) && (value.restriction = undefined);
                 return value;
             });
         }
