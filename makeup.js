@@ -215,29 +215,40 @@ MakeUp.prototype.getCoefficient = function () {
 
     let arr = this.arrChildFormatted;
 
+    this.totalCombinations = new Decimal(Number.MAX_SAFE_INTEGER);
+
     let firstCoefficient;
     if (arr[0].restriction) {
         firstCoefficient = new Decimal(arr[0].restriction);
-    } else {
-        firstCoefficient = total.dividedBy(arr[0]).trunc();
-        if (firstCoefficient.equals(0) || firstCoefficient.equals(1) || arr.length === 1) {
-            this.totalCombinations = arr[0].times(firstCoefficient.plus(1));
-            this.arrCoefficient.push({
+        if (total.dividedBy(arr[0]).trunc().equals(firstCoefficient)) {
+            this.totalCombinations = arr[0].times(firstCoefficient).plus(arr[1]);
+            this.arrCoefficient = [{
                 key: arr[0],
-                number: firstCoefficient.plus(1),
-            });
+                number: firstCoefficient,
+            }, {
+                key: arr[1],
+                number: new Decimal(1),
+            }];
+            firstCoefficient = firstCoefficient.minus(1);
+        }
+    } else {
+        firstCoefficient = total.dividedBy(arr[0]).trunc().minus(1);
+        this.totalCombinations = arr[0].times(firstCoefficient.plus(2));
+        this.arrCoefficient.push({
+            key: arr[0],
+            number: firstCoefficient.plus(2),
+        });
+        if (firstCoefficient.equals(-1) || arr.length === 1) {
             return toNumber(this);
         }
     }
 
-    let arrMaximumCoefficient = [firstCoefficient, ...arr.slice(1).map(value => value.restriction ? new Decimal(value.restriction) : total.dividedBy(value).trunc().plus(1))],
+    let arrMaximumCoefficient = arr.slice(1).map(value => value.restriction ? new Decimal(value.restriction) : total.dividedBy(value).trunc().plus(1)),
         /**
          *  缺省第一个系数
          */
-        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 2)],
+        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 1)],
         markLimitsOfInspection = arrCoefficient.length - 1;
-
-    this.totalCombinations = new Decimal(Number.MAX_SAFE_INTEGER);
 
     while (true) {
         let min = arrCoefficient.reduce((accumulator, currentValue, currentIndex) => accumulator.plus(arr[currentIndex + 1].times(currentValue)), new Decimal(0)),
@@ -259,7 +270,7 @@ MakeUp.prototype.getCoefficient = function () {
             }
             markLastChange0 = ++markLastChange;
         } else {
-            let max = arr[0].times(arrMaximumCoefficient[0]).plus(min);
+            let max = arr[0].times(firstCoefficient).plus(min);
             if (max.greaterThan(total)) {
                 if (min.greaterThanOrEqualTo(total)) {
                     this.totalCombinations = min;
@@ -272,7 +283,7 @@ MakeUp.prototype.getCoefficient = function () {
                     }
                 } else {
                     let from = new Decimal(1),
-                        to = arrMaximumCoefficient[0].minus(arr[0].restriction ? 0 : 1);
+                        to = firstCoefficient.minus(1);
                     while (from.lessThanOrEqualTo(to)) {
                         let mid = to.minus(from).dividedBy(2).plus(from).trunc();
                         let sum = arr[0].times(mid).plus(min);
@@ -294,7 +305,7 @@ MakeUp.prototype.getCoefficient = function () {
                 }
             } else if (max.equals(total)) {
                 this.totalCombinations = total;
-                this.arrCoefficient = [arrMaximumCoefficient[0], ...arrCoefficient].map((value, index) => ({
+                this.arrCoefficient = [firstCoefficient, ...arrCoefficient].map((value, index) => ({
                     key: arr[index],
                     number: value,
                 }));
@@ -302,7 +313,7 @@ MakeUp.prototype.getCoefficient = function () {
             }
             markLastChange0 = markLastChange = 0;
         }
-        while (arrCoefficient[markLastChange].equals(arrMaximumCoefficient[markLastChange + 1])) {
+        while (arrCoefficient[markLastChange].equals(arrMaximumCoefficient[markLastChange])) {
             if (markLastChange === markLimitsOfInspection) {
                 if (markLimitsOfInspection-- === 0) {
                     return toNumber(this);
@@ -413,16 +424,16 @@ function fnFormatArr_Preliminary(total, arr) {
  *  最终判断：二分查找求和，返回是否凑到
  */
 function fnFormatArr_Final(total, arr) {
-    let firstCoefficient = total.dividedBy(arr[0]).trunc();
-    if (firstCoefficient.equals(1)) {
+    let firstCoefficient = total.dividedBy(arr[0]).trunc().minus(1);
+    if (firstCoefficient.equals(0)) {
         return false;
     }
 
-    let arrMaximumCoefficient = [firstCoefficient, ...arr.slice(1).map(value => total.dividedBy(value).trunc())],
+    let arrMaximumCoefficient = arr.slice(1).map(value => total.dividedBy(value).trunc()),
         /**
          *  缺省第一个系数
          */
-        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 2)],
+        arrCoefficient = [new Decimal(1), ...getArray(arrMaximumCoefficient.length - 1)],
         markLimitsOfInspection = arrCoefficient.length - 1;
     while (true) {
         let min = arrCoefficient.reduce((accumulator, currentValue, currentIndex) => accumulator.plus(arr[currentIndex + 1].times(currentValue)), new Decimal(0)),
@@ -445,11 +456,10 @@ function fnFormatArr_Final(total, arr) {
         } else if (min.equals(total)) {
             return true;
         } else {
-            let max = arr[0].times(arrMaximumCoefficient[0]).plus(min);
-            // 此处可以思考：会出现等于的情况吗？不会！
+            let max = arr[0].times(firstCoefficient).plus(min);
             if (max.greaterThan(total)) {
                 let from = new Decimal(1),
-                    to = arrMaximumCoefficient[0].minus(1);
+                    to = firstCoefficient.minus(1);
                 while (from.lessThanOrEqualTo(to)) {
                     let mid = to.minus(from).dividedBy(2).plus(from).trunc();
                     let i = arr[0].times(mid).plus(min).comparedTo(total);
@@ -461,10 +471,12 @@ function fnFormatArr_Final(total, arr) {
                         to = mid.minus(1);
                     }
                 }
+            } else if (max.equals(total)) {
+                return true;
             }
             markLastChange0 = markLastChange = 0;
         }
-        while (arrCoefficient[markLastChange].equals(arrMaximumCoefficient[markLastChange + 1])) {
+        while (arrCoefficient[markLastChange].equals(arrMaximumCoefficient[markLastChange])) {
             if (markLastChange === markLimitsOfInspection) {
                 if (markLimitsOfInspection-- === 0) {
                     return false;
